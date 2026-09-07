@@ -107,7 +107,7 @@ export interface Report {
   id: string;
   reporter_id: string;
   reporter?: Profile;
-  target_type: 'user' | 'post' | 'comment' | 'experience';
+  target_type: 'user' | 'post' | 'comment' | 'experience' | 'progress' | 'milestone' | 'proof';
   target_id: string;
   target_preview?: string;
   reason: string;
@@ -172,3 +172,71 @@ export interface SystemSetting {
   updated_by?: string;
   updated_at: string;
 }
+
+// Progress, Milestone, Proof & Timeline System (VERA Core Differentiator)
+export type ProgressStatus = 'active' | 'paused' | 'completed' | 'archived';
+export type ItemVisibility = 'public' | 'followers' | 'private';
+export type ProofType = 'github' | 'website' | 'certificate' | 'image' | 'video' | 'document' | 'other';
+export type ProofStatus = 'unverified' | 'verified' | 'rejected';
+
+export interface Progress {
+  id: string;
+  user_id: string;
+  user?: Profile;
+  title: string;
+  description?: string;
+  category: string;
+  start_date: string;
+  end_date?: string | null;
+  status: ProgressStatus;
+  visibility: ItemVisibility;
+  cover_url?: string | null;
+  milestones_count?: number;
+  proofs_count?: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+}
+
+export interface Milestone {
+  id: string;
+  progress_id: string;
+  progress?: Progress;
+  user_id: string;
+  user?: Profile;
+  title: string;
+  description?: string;
+  milestone_date: string;
+  media_url?: string | null;
+  visibility: ItemVisibility;
+  is_shared_to_feed: boolean;
+  proofs?: Proof[];
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+}
+
+export interface Proof {
+  id: string;
+  milestone_id?: string | null;
+  milestone?: Milestone;
+  progress_id: string;
+  progress?: Progress;
+  user_id: string;
+  user?: Profile;
+  type: ProofType;
+  title: string;
+  description?: string;
+  external_url?: string | null;
+  media_url?: string | null;
+  visibility: ItemVisibility;
+  verification_status: ProofStatus;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  reviewer?: Profile | null;
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+}
+

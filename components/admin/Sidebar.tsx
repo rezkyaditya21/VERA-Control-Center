@@ -17,6 +17,7 @@ import {
   Settings,
   ShieldCheck,
   ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CURRENT_ADMIN } from '@/lib/mockData';
@@ -64,6 +65,23 @@ export default function Sidebar({ mobileOpen, onCloseMobile }: SidebarProps) {
           label: 'Moderation Queue',
           href: '/admin/moderation',
           icon: ListTodo,
+        },
+      ],
+    },
+    {
+      title: 'PROGRESS & PROOFS',
+      items: [
+        {
+          label: 'Progress Overview',
+          href: '/admin/progress',
+          icon: TrendingUp,
+        },
+        {
+          label: 'Proof Verification',
+          href: '/admin/proofs',
+          icon: ShieldCheck,
+          badge: '4',
+          badgeColor: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
         },
       ],
     },
