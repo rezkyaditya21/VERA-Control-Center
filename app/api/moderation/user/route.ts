@@ -2,9 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentAdmin } from '@/lib/auth/session';
 import { hasPermission, PERMISSIONS, PermissionKey } from '@/lib/auth/permissions';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || 'local-admin';
+    const rateCheck = checkRateLimit(`mod-user:${ip}`, 45, 60);
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please try again shortly.' },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+            'X-RateLimit-Limit': '45',
+            'X-RateLimit-Remaining': '0',
+          }
+        }
+      );
+    }
+
     const admin = await getCurrentAdmin();
     if (!admin) {
       return NextResponse.json({ success: false, error: 'Unauthorized: Admin session required' }, { status: 401 });

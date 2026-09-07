@@ -7,7 +7,7 @@ import { checkRateLimit } from '@/lib/rateLimit';
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get('x-forwarded-for') || 'local-admin';
-    const rateCheck = checkRateLimit(`mod-report:${ip}`, 45, 60);
+    const rateCheck = checkRateLimit(`mod-comment:${ip}`, 45, 60);
 
     if (!rateCheck.allowed) {
       return NextResponse.json(
@@ -29,23 +29,24 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { reportId, action, notes } = body;
+    const { commentId, action, reason } = body;
 
-    if (!reportId || !action) {
-      return NextResponse.json({ success: false, error: 'Missing reportId or action' }, { status: 400 });
+    if (!commentId || !action) {
+      return NextResponse.json({ success: false, error: 'Missing commentId or action' }, { status: 400 });
     }
 
-    let requiredPermission: PermissionKey = PERMISSIONS.REPORTS_RESOLVE;
-    let newStatus = 'resolved';
-    let auditAction = 'REPORT_RESOLVED';
+    let requiredPermission: PermissionKey = PERMISSIONS.COMMENTS_HIDE;
+    let newStatus = 'hidden';
+    let auditAction = 'COMMENT_HIDDEN';
 
-    if (action === 'dismiss') {
-      newStatus = 'dismissed';
-      auditAction = 'REPORT_DISMISSED';
-    } else if (action === 'assign') {
-      requiredPermission = PERMISSIONS.REPORTS_ASSIGN;
-      newStatus = 'reviewing';
-      auditAction = 'REPORT_ASSIGNED';
+    if (action === 'remove') {
+      requiredPermission = PERMISSIONS.COMMENTS_DELETE;
+      newStatus = 'removed';
+      auditAction = 'COMMENT_REMOVED';
+    } else if (action === 'restore') {
+      requiredPermission = PERMISSIONS.COMMENTS_HIDE;
+      newStatus = 'published';
+      auditAction = 'COMMENT_RESTORED';
     }
 
     if (!hasPermission(admin.role, requiredPermission)) {
@@ -57,46 +58,45 @@ export async function POST(req: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // 1. Update report in PostgreSQL
-    const { error: reportError } = await supabase
-      .from('reports')
+    // 1. Update comment status in PostgreSQL
+    const { error: commentError } = await supabase
+      .from('comments')
       .update({
         status: newStatus,
-        assigned_to: admin.id,
-        resolution_notes: notes || 'Handled via Control Center',
-        resolved_at: newStatus !== 'reviewing' ? new Date().toISOString() : null,
+        removal_reason: reason || null,
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', reportId);
+      .eq('id', commentId);
 
-    if (reportError) {
-      console.warn('[Moderation Report API] Database update warning:', reportError.message);
+    if (commentError) {
+      console.warn('[Moderation Comment API] Database update warning:', commentError.message);
     }
 
-    // 2. Audit log
+    // 2. Insert audit log
     await supabase.from('admin_audit_logs').insert({
       admin_id: admin.id,
       admin_email: admin.email,
       action: auditAction,
-      target_type: 'report',
-      target_id: reportId,
+      target_type: 'comment',
+      target_id: commentId,
       metadata: {
-        resolution_notes: notes || '',
+        reason: reason || 'Comment moderated by administrator',
         new_status: newStatus,
-        reviewer_id: admin.id,
+        admin_role: admin.role,
       },
     }).select();
 
     return NextResponse.json({
       success: true,
-      message: `Report ${reportId} marked as ${newStatus}`,
+      message: `Comment ${commentId} status successfully updated to ${newStatus}`,
       data: {
-        reportId,
+        commentId,
         status: newStatus,
         action: auditAction,
       },
     });
   } catch (error: any) {
-    console.error('[Moderation Report API] Internal error:', error);
+    console.error('[Moderation Comment API] Internal error:', error);
     return NextResponse.json({ success: false, error: error.message || 'Unable to complete this action.' }, { status: 500 });
   }
 }

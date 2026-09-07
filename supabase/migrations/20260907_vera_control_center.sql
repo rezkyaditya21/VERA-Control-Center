@@ -233,6 +233,15 @@ CREATE TABLE IF NOT EXISTS public.system_settings (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- PERFORMANCE INDEXES (High-throughput query optimization)
+CREATE INDEX IF NOT EXISTS idx_posts_status_created ON public.posts(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_category ON public.posts(category);
+CREATE INDEX IF NOT EXISTS idx_reports_status_created ON public.reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_post_status ON public.comments(post_id, status);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON public.profiles(status);
+CREATE INDEX IF NOT EXISTS idx_verifications_status ON public.verifications(status);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created ON public.admin_audit_logs(created_at DESC);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
